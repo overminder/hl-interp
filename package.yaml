@@ -1,0 +1,62 @@
+name:                hl-interp
+version:             0.1.0.0
+github:              "overminder/hl-interp"
+license:             BSD3
+author:              "Overmind JIANG"
+maintainer:          "p90eri@gmail.com"
+copyright:           "2018 Overmind JIANG"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/overminder/hl-interp#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- containers
+# - mtl
+- transformers
+- lens
+
+library:
+  source-dirs: src
+
+default-extensions:
+  - MultiParamTypeClasses
+  - GeneralizedNewtypeDeriving
+  - RecordWildCards
+  - FlexibleContexts
+  - PatternSynonyms
+  - TypeApplications
+
+executables:
+  hl-interp-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - hl-interp
+
+tests:
+  hl-interp-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - hl-interp
+    - hspec
+    - QuickCheck

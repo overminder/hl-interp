@@ -1,0 +1,8 @@
+- at least do CFI
+- use parameterizable state monad for TagMach
+- hand written test
+- Randomized test
+- see bcpierce's code
+
+- Goal: feel diff on many policies
+- repo
