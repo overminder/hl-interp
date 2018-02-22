@@ -32,10 +32,8 @@ type CfiM a = MachM CfiJumps a
 hasJump :: (Int, Int) -> CfiM Bool
 hasJump x = gets (S.member x . unCfiJumps)
 
-noSuchRule = throwMach NoApplicableRule
-
 instance TagMach CfiJumps CfiTag where
-  tagRule inst pcTag instTag extra = do
+  tagRule pcTag instTag extra = do
     let
       checkCfi origRes = case (pcTag, instTag) of
         -- If the last instr is a jump (so pcTag is Code any), this instTag
@@ -50,20 +48,26 @@ instance TagMach CfiJumps CfiTag where
         ok <- hasJump (src, dst)
         if ok then pure origRes else noSuchRule
     -- Rule dispatch 
-    case (inst, extra) of
+    case extra of
       -- Nop: returns (pc, _, _)
-      (NopI, NopT) ->
+      NopT ->
         checkCfi (CodeBotT, NopO)
 
-      (HaltI, HaltT) ->
+      HaltT ->
         checkCfi (CodeBotT, HaltO)
 
       -- Const: returns (pc, rd, _)
-      (ConstI {}, ConstT {..}) ->
+      ConstT {..} ->
         checkCfi (CodeBotT, ConstO { _rdTagOut = _rdTagIn })
 
+      MovT {..} ->
+        checkCfi (CodeBotT, MovO { _rdTagOut = _rsTagIn })
+
+      LoadT {..} ->
+        checkCfi (instTag, LoadO { _rdTagOut = _memTagIn })
+
       -- Store: returns (pc mem loc)
-      (StoreI {}, StoreT {..}) -> do
+      StoreT {..} -> do
         let
           out = StoreO {
             _memTagOut = _rsTagIn,
@@ -74,11 +78,15 @@ instance TagMach CfiJumps CfiTag where
           _ -> noSuchRule
 
       -- Jal: returns (pc rlink)
-      (JalI {}, JalT {..}) ->
+      JalT {..} ->
         checkCfi (instTag, JalO { _rlinkTagOut = pcTag })
 
-      (JumpI {}, JumpT {..}) ->
+      JumpT {..} ->
         checkCfi (instTag, JumpO)
 
-      _ ->
-        shouldntHappen "Inst and InstTagIn mismatch"
+      BnzT {..} ->
+        checkCfi (instTag, BnzO)
+
+      BinOpT {..} ->
+        checkCfi (instTag, BinOpO { _rdTagOut = defaultT })
+

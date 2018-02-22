@@ -29,8 +29,7 @@ shouldntHappen :: String -> MachM s t
 shouldntHappen = throwMach . ShouldntHappen
 
 class Tag t => TagMach p t where
-  tagRule :: Inst
-          -> t -> t                     -- pc, inst tags
+  tagRule :: t -> t                     -- pc, inst tags
           -> InstTagIn t                -- input tags
           -> MachM p (t, InstTagOut t)  -- pc, output tags
 
@@ -53,23 +52,32 @@ data InstTagIn a
   = NopT
   | HaltT
   | ConstT { _rdTagIn :: a }
+  | MovT { _rsTagIn :: a, _rdTagIn :: a }
   | StoreT { _rpTagIn :: a, _rsTagIn :: a, _memTagIn :: a, _locTagIn :: a }
+  | LoadT { _rpTagIn :: a, _rdTagIn :: a, _memTagIn :: a, _locTagIn :: a }
+  | BinOpT { _r1TagIn :: a, _r2TagIn :: a, _rdTagIn :: a }
   | JalT { _rdTagIn :: a, _rlinkTagIn :: a }
   | JumpT { _rdTagIn :: a }
+  | BnzT { _rsTagIn :: a }
   deriving (Show, Eq)
 
 data InstTagOut a
   = NopO
   | HaltO
   | ConstO { _rdTagOut :: a }
+  | MovO { _rdTagOut :: a }
+  | LoadO { _rdTagOut :: a }
   | StoreO { _memTagOut :: a, _locTagOut :: a }
   | JalO { _rlinkTagOut :: a }
+  | BinOpO { _rdTagOut :: a }
   | JumpO
+  | BnzO
   deriving (Show, Eq)
 
 -- GNU syntax, e.g. inst r_s r_d
 data Inst
   = NopI
+  | HaltI
   | ConstI Val Reg
   | MovI Reg Reg          -- r_s, r_d
   | LoadI Reg Reg         -- r_p, r_d
@@ -78,7 +86,6 @@ data Inst
   | JumpI Reg             -- r_d
   | JalI Reg Reg          -- r_d, r_link
   | BnzI Reg Int          -- r_s, imm
-  | HaltI
   deriving (Show, Eq)
 
 data Op
@@ -125,3 +132,4 @@ writeReg = M.insert
 writeHeap :: Tag a => Int -> (VT a, a) -> HeapMap a -> HeapMap a
 writeHeap = M.insert
 
+noSuchRule = throwMach NoApplicableRule

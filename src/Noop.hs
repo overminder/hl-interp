@@ -16,22 +16,28 @@ instance Tag NoopTag where
   defaultT = noopTag
 
 instance TagMach NoopState NoopTag where
-  tagRule inst pcTag instTag extra = do
+  tagRule pcTag instTag extra = do
     -- Rule dispatch 
-    case (inst, extra) of
+    case extra of
       -- Nop: returns (pc, _, _)
-      (NopI, NopT) ->
+      NopT ->
         checkNoop (defaultT, NopO)
 
-      (HaltI, HaltT) ->
+      HaltT ->
         checkNoop (defaultT, HaltO)
 
+      MovT {..} ->
+        checkNoop (defaultT, MovO { _rdTagOut = _rsTagIn })
+
+      LoadT {..} ->
+        checkNoop (defaultT, LoadO { _rdTagOut = _memTagIn })
+
       -- Const: returns (pc, rd, _)
-      (ConstI {}, ConstT {..}) ->
+      ConstT {..} ->
         checkNoop (defaultT, ConstO { _rdTagOut = _rdTagIn })
 
       -- Store: returns (pc mem loc)
-      (StoreI {}, StoreT {..}) -> do
+      StoreT {..} -> do
         let
           out = StoreO {
             _memTagOut = _rsTagIn,
@@ -40,11 +46,15 @@ instance TagMach NoopState NoopTag where
         checkNoop (defaultT, out)
 
       -- Jal: returns (pc rlink)
-      (JalI {}, JalT {..}) ->
+      JalT {..} ->
         checkNoop (instTag, JalO { _rlinkTagOut = pcTag })
 
-      (JumpI {}, JumpT {..}) ->
+      JumpT {..} ->
         checkNoop (instTag, JumpO)
 
-      _ ->
-        shouldntHappen "Inst and InstTagIn mismatch"
+      BnzT {..} ->
+        checkNoop (instTag, BnzO)
+
+      BinOpT {..} ->
+        checkNoop (instTag, BinOpO { _rdTagOut = defaultT })
+

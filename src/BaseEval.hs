@@ -22,7 +22,7 @@ step = do
   Machine regs heap pc@(pcv, pcTag) prog <- use _2
   (inst, instTag) <- maybe (throwMach CodeAddrNotMapped) pure (M.lookup pcv prog)
   let
-    runRule = runRule0 inst pcTag instTag
+    runRule = runRule0 pcTag instTag
     doJump pc tag = _2.machPc .= (pc, tag)
     bumpPc pcTag' = doJump (pcv + 1) pcTag'
     modifyR f = _2.machRegs %= f
@@ -43,12 +43,35 @@ step = do
       modifyR $ writeReg rd (imm, rdTag')
       bumpPc pcTag'
 
+    MovI rs rd -> do
+      let (rsv, rsTag) = readReg rs regs
+          (_, rdTag) = readReg rd regs
+      (pcTag', MovO rdTag') <- runRule (MovT rsTag rdTag)
+      modifyR $ writeReg rd (rsv, rdTag')
+      bumpPc pcTag'
+
+    LoadI rp rd -> do
+      let (_, rdTag) = readReg rd regs
+          (rpv, rpTag) = readReg rp regs
+          ((memv, memTag), locTag) = readHeap rpv heap
+      (pcTag', LoadO rdTag') <- runRule (LoadT rpTag rdTag memTag locTag)
+      modifyR $ writeReg memv (rd, rdTag')
+      bumpPc pcTag'
+
     StoreI rp rs -> do
       let (rpv, rpTag) = readReg rp regs
           ((memv, memTag), locTag) = readHeap rpv heap
           (rsv, rsTag) = readReg rs regs
       (pcTag', StoreO memTag' locTag') <- runRule (StoreT rpTag rsTag memTag locTag)
       modifyH $ writeHeap rpv ((memv, memTag'), locTag')
+      bumpPc pcTag'
+
+    BinOpI op r1 r2 rd -> do
+      let (r1v, r1Tag) = readReg r1 regs
+          (r2v, r2Tag) = readReg r2 regs
+          (_, rdTag) = readReg rd regs
+      (pcTag', BinOpO rdTag') <- runRule (BinOpT r1Tag r2Tag rdTag)
+      modifyR $ writeReg rd (runOp op r1v r2v, rdTag')
       bumpPc pcTag'
 
     JalI rd rlink -> do
@@ -62,11 +85,27 @@ step = do
       let (rdv, rdTag) = readReg rd regs
       (pcTag', JumpO) <- runRule (JumpT rdTag)
       doJump rdv pcTag'
+
+    BnzI rs offset -> do
+      let (rdv, rdTag) = readReg rs regs
+      (pcTag', BnzO) <- runRule (BnzT rdTag)
+      doJump (if rdv /= 0 then pcv + offset else pcv + 1) pcTag'
   -- Done
   pure ()
  where
-  runRule0 inst pcTag instTag extra = liftPolicy $
-    tagRule inst pcTag instTag extra
+  runRule0 pcTag instTag extra = liftPolicy $
+    tagRule pcTag instTag extra
+
+runOp = \case
+  AddO -> (+)
+  SubO -> (-)
+  MulO -> (*)
+  DivO -> div
+  LtO -> b (<)
+  GtO -> b (>)
+  EqO -> b (==)
+ where
+  b op x y = if op x y then 1 else 0
 
 runMach :: TagMach p t => p -> Machine t -> (p, Machine t, HaltReason)
 runMach = go
@@ -74,4 +113,3 @@ runMach = go
   go p m = case execStateT step (p, m) of
     Left x -> (p, m, x)
     Right (p', m') -> go p' m'
-

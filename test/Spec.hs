@@ -5,11 +5,13 @@ import Control.Exception (evaluate)
 
 import qualified TestNoop
 import qualified TestCfi
+import qualified TestSealing
 
 main :: IO ()
 main = hspec $ do
   TestNoop.tests
   TestCfi.tests
+  TestSealing.tests
   -- describe "Prelude.head" $ do
   --   it "returns the first element of a list" $ do
   --     head [23 ..] `shouldBe` (23 :: Int)
