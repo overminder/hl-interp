@@ -12,14 +12,15 @@ data CodeLoc
   | AddrC Int
   deriving (Show, Eq)
 
-pattern CodeAddrT x = CodeT (AddrC x)
-pattern CodeBotT = CodeT BotC
-
 data CfiTag
   = CodeT CodeLoc
   | DataT
-  | NoT  -- `other registers are always tagged \textbullet?`
+  -- | Default tag for all other registers.
+  | NoT
   deriving (Show, Eq)
+
+pattern CodeAddrT x = CodeT (AddrC x)
+pattern CodeBotT = CodeT BotC
 
 newtype CfiJumps = CfiJumps { unCfiJumps :: S.Set (Int, Int) }
   deriving (Show, Eq)

@@ -11,7 +11,7 @@ data STag
   = Data
   | Sealed Int
   | Key Int
-  -- A virtual instruction that represents a service
+  -- | A virtual instruction that represents a service
   | VirtInst Service
   deriving (Show, Eq)
   
