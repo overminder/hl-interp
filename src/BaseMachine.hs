@@ -113,6 +113,7 @@ data HaltReason
   | NoApplicableRule
   | CodeAddrNotMapped
   | ShouldntHappen String
+  | ExplicitFailure String
   deriving (Show, Eq)
 
 makeLenses ''Machine
