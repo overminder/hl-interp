@@ -121,6 +121,9 @@ makeLenses ''Machine
 emptyMachine :: Tag t => Machine t
 emptyMachine = Machine M.empty M.empty (0, defaultT) M.empty
 
+emptyMachine' :: t -> Machine t
+emptyMachine' t0 = Machine M.empty M.empty (0, t0) M.empty
+
 readReg :: Tag a => Reg -> RegMap a -> VT a
 readReg = M.findWithDefault (0, defaultT)
 
