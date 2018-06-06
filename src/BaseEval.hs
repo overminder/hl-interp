@@ -39,59 +39,59 @@ step = do
       throwMach ExecutedHaltInst
 
     ConstI imm rd -> do
-      let (_, rdTag) = readReg rd regs
+      (_, rdTag) <- readReg' rd regs
       (pcTag', ConstO rdTag') <- runRule (ConstT rdTag)
       modifyR $ writeReg rd (imm, fromMaybe rdTag rdTag')
       bumpPc pcTag'
 
     MovI rs rd -> do
-      let (rsv, rsTag) = readReg rs regs
-          (_, rdTag) = readReg rd regs
+      (rsv, rsTag) <- readReg' rs regs
+      (_, rdTag) <- readReg' rd regs
       (pcTag', MovO rdTag') <- runRule (MovT rsTag rdTag)
       modifyR $ writeReg rd (rsv, fromMaybe rdTag rdTag')
       bumpPc pcTag'
 
     LoadI rp rd -> do
-      let (_, rdTag) = readReg rd regs
-          (rpv, rpTag) = readReg rp regs
-          ((memv, memTag), locTag) = readHeap rpv heap
+      (_, rdTag) <- readReg' rd regs
+      (rpv, rpTag) <- readReg' rp regs
+      ((memv, memTag), locTag) <- readHeap' rpv heap
       (pcTag', LoadO rdTag') <- runRule (LoadT rpTag rdTag memTag locTag)
       modifyR $ writeReg memv (rd, fromMaybe rdTag rdTag')
       bumpPc pcTag'
 
     StoreI rp rs -> do
-      let (rpv, rpTag) = readReg rp regs
-          ((memv, memTag), locTag) = readHeap rpv heap
-          (rsv, rsTag) = readReg rs regs
+      (rpv, rpTag) <- readReg' rp regs
+      ((memv, memTag), locTag) <- readHeap' rpv heap
+      (rsv, rsTag) <- readReg' rs regs
       (pcTag', StoreO memTag' locTag') <- runRule (StoreT rpTag rsTag memTag locTag)
       modifyH $ writeHeap rpv ((memv, fromMaybe memTag memTag'),
         fromMaybe locTag locTag')
       bumpPc pcTag'
 
     BinOpI op r1 r2 rd -> do
-      let (r1v, r1Tag) = readReg r1 regs
-          (r2v, r2Tag) = readReg r2 regs
-          (_, rdTag) = readReg rd regs
+      (r1v, r1Tag) <- readReg' r1 regs
+      (r2v, r2Tag) <- readReg' r2 regs
+      (_, rdTag) <- readReg' rd regs
       (pcTag', BinOpO rdTag') <- runRule (BinOpT r1Tag r2Tag rdTag)
       modifyR $ writeReg rd (runOp op r1v r2v,
         fromMaybe rdTag rdTag')
       bumpPc pcTag'
 
     JalI rd rlink -> do
-      let (rdv, rdTag) = readReg rd regs
-      let (_, rlinkTag) = readReg rlink regs
+      (rdv, rdTag) <- readReg' rd regs
+      (_, rlinkTag) <- readReg' rlink regs
       (pcTag', JalO rlinkTag') <- runRule (JalT rdTag rlinkTag)
       modifyR $ writeReg rlink (pcv + 1,
         fromMaybe rlinkTag rlinkTag')
       doJump rdv pcTag'
 
     JumpI rd -> do
-      let (rdv, rdTag) = readReg rd regs
+      (rdv, rdTag) <- readReg' rd regs
       (pcTag', JumpO) <- runRule (JumpT rdTag)
       doJump rdv pcTag'
 
     BnzI rs offset -> do
-      let (rdv, rdTag) = readReg rs regs
+      (rdv, rdTag) <- readReg' rs regs
       (pcTag', BnzO) <- runRule (BnzT rdTag)
       doJump (if rdv /= 0 then pcv + offset else pcv + 1) pcTag'
   -- Done
@@ -99,6 +99,9 @@ step = do
  where
   runRule0 pcTag instTag extra = liftPolicy $
     tagRule pcTag instTag extra
+
+readReg' r rs = liftPolicy $ readReg r rs
+readHeap' addr m = liftPolicy $ readHeap addr m
 
 runOp = \case
   AddO -> (+)

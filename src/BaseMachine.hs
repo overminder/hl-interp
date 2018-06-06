@@ -13,12 +13,9 @@ type Reg = Int
 type RegMap t = M.Map Reg (VT t)
 type HeapMap t = M.Map Int (VT t, t) -- (value+tag, loc tag)
 
-class Tag t where
-  defaultT :: t
-
 -- A parameterized State monad to contain all the machine states,
 -- including the AP and the rule coprocessor state.
-type MachM s t = StateT s (Either HaltReason) t
+type MachM s a = StateT s (Either HaltReason) a
 -- p: Policy state type, t: tag type
 type MachPolicyM p t a = MachM (p, Machine t) a
 
@@ -28,10 +25,12 @@ throwMach = lift . Left
 shouldntHappen :: String -> MachM s t
 shouldntHappen = throwMach . ShouldntHappen
 
-class Tag t => TagMach p t where
-  tagRule :: t -> t                     -- pc, inst tags
-          -> InstTagIn t                -- input tags
+class TagMach p t | t -> p where
+  tagRule :: t -> t                            -- pc, inst tags
+          -> InstTagIn t                       -- input tags
           -> MachM p (t, InstTagOut (Maybe t)) -- pc, output tags
+  defaultRegT :: MachM p t
+  defaultHeapT :: MachM p t
 
 liftPolicy :: MachM p a -> MachPolicyM p t a
 liftPolicy m0 = do
@@ -118,22 +117,23 @@ data HaltReason
 
 makeLenses ''Machine
 
-emptyMachine :: Tag t => Machine t
-emptyMachine = Machine M.empty M.empty (0, defaultT) M.empty
-
 emptyMachine' :: t -> Machine t
 emptyMachine' t0 = Machine M.empty M.empty (0, t0) M.empty
 
-readReg :: Tag a => Reg -> RegMap a -> VT a
-readReg = M.findWithDefault (0, defaultT)
+readReg :: TagMach s t => Reg -> RegMap t -> MachM s (VT t)
+readReg r m = do
+  rt <- defaultRegT
+  pure $ M.findWithDefault (0, rt) r m
 
-readHeap :: Tag a => Int -> HeapMap a -> (VT a, a)
-readHeap = M.findWithDefault ((0, defaultT), defaultT)
+readHeap :: TagMach s t => Int -> HeapMap t -> MachM s (VT t, t)
+readHeap addr m = do
+  ht <- defaultHeapT
+  pure $ M.findWithDefault ((0, ht), ht) addr m
 
-writeReg :: Tag a => Reg -> VT a -> RegMap a -> RegMap a
+writeReg :: Reg -> VT a -> RegMap a -> RegMap a
 writeReg = M.insert
 
-writeHeap :: Tag a => Int -> (VT a, a) -> HeapMap a -> HeapMap a
+writeHeap :: Int -> (VT a, a) -> HeapMap a -> HeapMap a
 writeHeap = M.insert
 
 noSuchRule = throwMach NoApplicableRule

@@ -28,7 +28,7 @@ tests = describe "BaseEval+Cfi" $ do
                      , (1, (JumpI 0, CodeAddrT 1))
                      , (100, (HaltI, CodeAddrT 100))
                      ]
-      finalMach = (machRegs %~ M.insert 0 (100, defaultT))
+      finalMach = (machRegs %~ M.insert 0 (100, NoT))
                 . (machPc .~ (100, CodeAddrT 1))
                 $ mach 
       ps1 = CfiJumps (S.fromList [(1, 100)])
@@ -41,7 +41,7 @@ tests = describe "BaseEval+Cfi" $ do
                      , (100, (NopI, CodeAddrT 100))
                      , (101, (HaltI, CodeBotT))
                      ]
-      finalMach = (machRegs %~ M.insert 0 (100, defaultT))
+      finalMach = (machRegs %~ M.insert 0 (100, NoT))
                 . (machPc .~ (101, CodeBotT))
                 $ mach 
       ps1 = CfiJumps (S.fromList [(1, 100)])
@@ -62,9 +62,9 @@ tests = describe "BaseEval+Cfi" $ do
  where
   mkMach x = (machProg .~ M.fromList (tag x))
            . (machPc .~ (0, CodeBotT))
-           $ (emptyMachine @ CfiTag)
+           $ (emptyMachine' NoT)
   tag = map $ \(ix, inst) -> (ix, (inst, CodeBotT))
   mkMach' x = (machProg .~ M.fromList x)
             . (machPc .~ (0, CodeBotT))
-            $ (emptyMachine @ CfiTag)
+            $ (emptyMachine' NoT)
   ps0 = CfiJumps S.empty

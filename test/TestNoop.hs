@@ -94,6 +94,6 @@ tests = describe "BaseEval+Noop" $ do
     -- runMach policyState mach `shouldBe` (policyState, finalMach, ExecutedHaltInst)
     1 `shouldBe` 1
  where
-  mkMach x = (machProg .~ M.fromList (tag x)) (emptyMachine @ NoopTag)
+  mkMach x = (machProg .~ M.fromList (tag x)) (emptyMachine' noopTag)
   policyState = noopState
   tag = map $ \(ix, inst) -> (ix, (inst, noopTag))

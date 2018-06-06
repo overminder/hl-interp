@@ -25,15 +25,15 @@ pattern CodeBotT = CodeT BotC
 newtype CfiJumps = CfiJumps { unCfiJumps :: S.Set (Int, Int) }
   deriving (Show, Eq)
 
-instance Tag CfiTag where
-  defaultT = NoT
-
 type CfiM a = MachM CfiJumps a
 
 hasJump :: (Int, Int) -> CfiM Bool
 hasJump x = gets (S.member x . unCfiJumps)
 
 instance TagMach CfiJumps CfiTag where
+  defaultRegT = pure NoT
+  defaultHeapT = pure NoT
+
   tagRule pcTag instTag extra = do
     let
       checkCfi origRes = case (pcTag, instTag) of
@@ -93,5 +93,5 @@ instance TagMach CfiJumps CfiTag where
         checkCfi (instTag, BnzO)
 
       BinOpT {..} ->
-        checkCfi (instTag, BinOpO { _rdTagOut = defaultT })
+        checkCfi (instTag, BinOpO { _rdTagOut = NoT })
 

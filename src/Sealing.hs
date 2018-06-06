@@ -29,14 +29,14 @@ emptySState = SState 1
 
 nextKey (SState i) = (i, SState $ i + 1)
 
-instance Tag STag where
-  defaultT = Data
-
 type SealingM a = MachM SState a
 
 resOk = pure . second (fmap Just)
 
 instance TagMach SState STag where
+  defaultRegT = pure Data
+  defaultHeapT = pure Data
+
   tagRule pcTag instTag extra = do
     let
       checkS origRes extra = checkS0 origRes $ [pcTag, instTag] ++ extra

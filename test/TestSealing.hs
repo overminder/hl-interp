@@ -31,18 +31,18 @@ tests = describe "BaseEval+Sealing" $ do
                     , (1, (JumpI 0))
                     , (100, (HaltI))
                     ]
-      finalMach = (machRegs %~ M.insert 0 (100, defaultT))
-                . (machPc .~ (100, defaultT))
+      finalMach = (machRegs %~ M.insert 0 (100, Data))
+                . (machPc .~ (100, Data))
                 $ mach 
     runMach ps0 mach `shouldBe` (ps0, finalMach, ExecutedHaltInst)
 
   it "calls mkKey correctly" $ do
     let
       mach = mkMach' [ (0, (ConstI 0 0, VirtInst MkKey))
-                     , (1, (HaltI, defaultT))
+                     , (1, (HaltI, Data))
                      ]
       finalMach = (machRegs %~ M.insert 0 (0, Key 1))
-                . (machPc .~ (1, defaultT))
+                . (machPc .~ (1, Data))
                 $ mach
       ps1 = SState 2
     runMach ps0 mach `shouldBe` (ps1, finalMach, ExecutedHaltInst)
@@ -50,14 +50,14 @@ tests = describe "BaseEval+Sealing" $ do
   it "calls seal correctly" $ do
     let
       mach = mkMach' [ (0, (ConstI 0 0, VirtInst MkKey))
-                     , (1, (ConstI 42 1, defaultT))
+                     , (1, (ConstI 42 1, Data))
                      , (2, (BinOpI AddO 1 0 2, VirtInst Seal))
-                     , (3, (HaltI, defaultT))
+                     , (3, (HaltI, Data))
                      ]
       finalMach = (machRegs %~ M.insert 0 (0, Key 1)
                   . M.insert 1 (42, Data)
                   . M.insert 2 (42, Sealed 1))
-                . (machPc .~ (3, defaultT))
+                . (machPc .~ (3, Data))
                 $ mach
       ps1 = SState 2
     runMach ps0 mach `shouldBe` (ps1, finalMach, ExecutedHaltInst)
@@ -65,15 +65,15 @@ tests = describe "BaseEval+Sealing" $ do
   it "calls unseal correctly" $ do
     let
       mach = mkMach' [ (0, (ConstI 0 0, VirtInst MkKey))
-                     , (1, (ConstI 42 1, defaultT))
+                     , (1, (ConstI 42 1, Data))
                      , (2, (BinOpI AddO 1 0 2, VirtInst Seal))
                      , (3, (BinOpI AddO 2 0 1, VirtInst Unseal))
-                     , (4, (HaltI, defaultT))
+                     , (4, (HaltI, Data))
                      ]
       finalMach = (machRegs %~ M.insert 0 (0, Key 1)
                   . M.insert 1 (42, Data)
                   . M.insert 2 (42, Sealed 1))
-                . (machPc .~ (4, defaultT))
+                . (machPc .~ (4, Data))
                 $ mach
       ps1 = SState 2
     runMach ps0 mach `shouldBe` (ps1, finalMach, ExecutedHaltInst)
@@ -81,14 +81,14 @@ tests = describe "BaseEval+Sealing" $ do
   it "halts when trying to adding a sealed word with another data word" $ do
     let
       mach = mkMach' [ (0, (ConstI 0 0, VirtInst MkKey))
-                     , (1, (ConstI 42 1, defaultT))
+                     , (1, (ConstI 42 1, Data))
                      , (2, (BinOpI AddO 1 0 2, VirtInst Seal))
-                     , (3, (BinOpI AddO 2 1 0, defaultT))
+                     , (3, (BinOpI AddO 2 1 0, Data))
                      ]
       finalMach = (machRegs %~ M.insert 0 (0, Key 1)
                   . M.insert 1 (42, Data)
                   . M.insert 2 (42, Sealed 1))
-                . (machPc .~ (3, defaultT))
+                . (machPc .~ (3, Data))
                 $ mach
       ps1 = SState 2
     runMach ps0 mach `shouldBe` (ps1, finalMach, NoApplicableRule)
@@ -96,12 +96,12 @@ tests = describe "BaseEval+Sealing" $ do
   it "halts when trying to adding a key with another data word" $ do
     let
       mach = mkMach' [ (0, (ConstI 0 0, VirtInst MkKey))
-                     , (1, (ConstI 42 1, defaultT))
-                     , (2, (BinOpI AddO 0 1 2, defaultT))
+                     , (1, (ConstI 42 1, Data))
+                     , (2, (BinOpI AddO 0 1 2, Data))
                      ]
       finalMach = (machRegs %~ M.insert 0 (0, Key 1)
                   . M.insert 1 (42, Data))
-                . (machPc .~ (2, defaultT))
+                . (machPc .~ (2, Data))
                 $ mach
       ps1 = SState 2
     runMach ps0 mach `shouldBe` (ps1, finalMach, NoApplicableRule)
@@ -114,7 +114,7 @@ tests = describe "BaseEval+Sealing" $ do
                      , (100, (NopI, CodeAddrT 100))
                      , (101, (HaltI, CodeBotT))
                      ]
-      finalMach = (machRegs %~ M.insert 0 (100, defaultT))
+      finalMach = (machRegs %~ M.insert 0 (100, Data))
                 . (machPc .~ (101, CodeBotT))
                 $ mach 
       ps1 = CfiJumps (S.fromList [(1, 100)])
@@ -135,11 +135,11 @@ tests = describe "BaseEval+Sealing" $ do
     -}
  where
   mkMach x = (machProg .~ M.fromList (tag x))
-           . (machPc .~ (0, defaultT))
-           $ (emptyMachine @ STag)
-  tag = map $ \(ix, inst) -> (ix, (inst, defaultT))
+           . (machPc .~ (0, Data))
+           $ (emptyMachine' Data)
+  tag = map $ \(ix, inst) -> (ix, (inst, Data))
   mkMach' x = (machProg .~ M.fromList x)
-            . (machPc .~ (0, defaultT))
-            $ (emptyMachine @ STag)
+            . (machPc .~ (0, Data))
+            $ (emptyMachine' Data)
   ps0 = emptySState
 
