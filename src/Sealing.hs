@@ -1,5 +1,6 @@
 module Sealing where
 
+import Control.Arrow (second)
 import Control.Monad.Trans.State
 import Control.Monad.Trans.Class
 import qualified Data.Map as M
@@ -33,6 +34,8 @@ instance Tag STag where
 
 type SealingM a = MachM SState a
 
+resOk = pure . second (fmap Just)
+
 instance TagMach SState STag where
   tagRule pcTag instTag extra = do
     let
@@ -40,7 +43,7 @@ instance TagMach SState STag where
       checkS' origRes = checkS origRes []
       -- Simply ensure that pc, inst and all args are not sealed.
       checkS0 origRes extra = if all (== Data) extra
-        then pure origRes
+        then resOk origRes
         else noSuchRule
 
     -- Rule dispatch 
@@ -54,7 +57,7 @@ instance TagMach SState STag where
       ConstT {..} -> case instTag of
         VirtInst MkKey -> do
           k <- state nextKey
-          pure (Data, ConstO { _rdTagOut = Key k })
+          resOk (Data, ConstO { _rdTagOut = Key k })
         _ -> checkS' (Data, ConstO { _rdTagOut = _rdTagIn })
 
       MovT {..} ->
@@ -79,9 +82,9 @@ instance TagMach SState STag where
       -- Both seal and unseal are binary operators.
       BinOpT {..} -> case (instTag, _r1TagIn, _r2TagIn) of
         (VirtInst Seal, Data, Key k) ->
-          pure (Data, BinOpO { _rdTagOut = Sealed k })
+          resOk (Data, BinOpO { _rdTagOut = Sealed k })
         (VirtInst Unseal, Sealed k0, Key k) -> if k0 == k
-          then pure (Data, BinOpO { _rdTagOut = Data })
+          then resOk (Data, BinOpO { _rdTagOut = Data })
           else noSuchRule
         _ -> checkS (Data, BinOpO { _rdTagOut = _r1TagIn })
                     [_r1TagIn, _r2TagIn]

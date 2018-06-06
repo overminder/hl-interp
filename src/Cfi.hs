@@ -43,11 +43,15 @@ instance TagMach CfiJumps CfiTag where
         -- so we can check its validity.
         -- In all other cases, pcTag will be Code bot.
         (CodeAddrT src, CodeAddrT dst) -> checkCfiSrcDst origRes src dst
-        (CodeBotT, CodeT _) -> pure origRes
+        (CodeBotT, CodeT _) -> resOk origRes
         _ -> noSuchRule
+
       checkCfiSrcDst origRes src dst = do
         ok <- hasJump (src, dst)
-        if ok then pure origRes else noSuchRule
+        if ok then resOk origRes else noSuchRule
+
+      resOk (pcTag', instTags') = pure (pcTag', fmap Just instTags')
+
     -- Rule dispatch 
     case extra of
       -- Nop: returns (pc, _, _)

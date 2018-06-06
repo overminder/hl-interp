@@ -31,7 +31,7 @@ shouldntHappen = throwMach . ShouldntHappen
 class Tag t => TagMach p t where
   tagRule :: t -> t                     -- pc, inst tags
           -> InstTagIn t                -- input tags
-          -> MachM p (t, InstTagOut t)  -- pc, output tags
+          -> MachM p (t, InstTagOut (Maybe t)) -- pc, output tags
 
 liftPolicy :: MachM p a -> MachPolicyM p t a
 liftPolicy m0 = do
@@ -72,7 +72,7 @@ data InstTagOut a
   | BinOpO { _rdTagOut :: a }
   | JumpO
   | BnzO
-  deriving (Show, Eq)
+  deriving (Show, Eq, Functor)
 
 -- GNU syntax, e.g. inst r_s r_d
 data Inst
@@ -137,3 +137,4 @@ writeHeap :: Tag a => Int -> (VT a, a) -> HeapMap a -> HeapMap a
 writeHeap = M.insert
 
 noSuchRule = throwMach NoApplicableRule
+

@@ -4,6 +4,7 @@ import Control.Monad.Trans.State
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.Class
 import qualified Data.Map as M
+import Data.Maybe (fromMaybe)
 import BaseMachine
 import Control.Lens
 
@@ -40,14 +41,14 @@ step = do
     ConstI imm rd -> do
       let (_, rdTag) = readReg rd regs
       (pcTag', ConstO rdTag') <- runRule (ConstT rdTag)
-      modifyR $ writeReg rd (imm, rdTag')
+      modifyR $ writeReg rd (imm, fromMaybe rdTag rdTag')
       bumpPc pcTag'
 
     MovI rs rd -> do
       let (rsv, rsTag) = readReg rs regs
           (_, rdTag) = readReg rd regs
       (pcTag', MovO rdTag') <- runRule (MovT rsTag rdTag)
-      modifyR $ writeReg rd (rsv, rdTag')
+      modifyR $ writeReg rd (rsv, fromMaybe rdTag rdTag')
       bumpPc pcTag'
 
     LoadI rp rd -> do
@@ -55,7 +56,7 @@ step = do
           (rpv, rpTag) = readReg rp regs
           ((memv, memTag), locTag) = readHeap rpv heap
       (pcTag', LoadO rdTag') <- runRule (LoadT rpTag rdTag memTag locTag)
-      modifyR $ writeReg memv (rd, rdTag')
+      modifyR $ writeReg memv (rd, fromMaybe rdTag rdTag')
       bumpPc pcTag'
 
     StoreI rp rs -> do
@@ -63,7 +64,8 @@ step = do
           ((memv, memTag), locTag) = readHeap rpv heap
           (rsv, rsTag) = readReg rs regs
       (pcTag', StoreO memTag' locTag') <- runRule (StoreT rpTag rsTag memTag locTag)
-      modifyH $ writeHeap rpv ((memv, memTag'), locTag')
+      modifyH $ writeHeap rpv ((memv, fromMaybe memTag memTag'),
+        fromMaybe locTag locTag')
       bumpPc pcTag'
 
     BinOpI op r1 r2 rd -> do
@@ -71,14 +73,16 @@ step = do
           (r2v, r2Tag) = readReg r2 regs
           (_, rdTag) = readReg rd regs
       (pcTag', BinOpO rdTag') <- runRule (BinOpT r1Tag r2Tag rdTag)
-      modifyR $ writeReg rd (runOp op r1v r2v, rdTag')
+      modifyR $ writeReg rd (runOp op r1v r2v,
+        fromMaybe rdTag rdTag')
       bumpPc pcTag'
 
     JalI rd rlink -> do
       let (rdv, rdTag) = readReg rd regs
       let (_, rlinkTag) = readReg rlink regs
       (pcTag', JalO rlinkTag') <- runRule (JalT rdTag rlinkTag)
-      modifyR $ writeReg rlink (pcv + 1, rlinkTag')
+      modifyR $ writeReg rlink (pcv + 1,
+        fromMaybe rlinkTag rlinkTag')
       doJump rdv pcTag'
 
     JumpI rd -> do

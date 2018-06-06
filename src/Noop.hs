@@ -10,7 +10,7 @@ newtype NoopState = NoopState ()
 noopTag = NoopTag ()
 noopState = NoopState ()
 
-checkNoop = pure
+checkNoop (pcTag, instTags) = pure (pcTag, fmap Just instTags)
 
 instance Tag NoopTag where
   defaultT = noopTag
